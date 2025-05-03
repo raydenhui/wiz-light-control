@@ -202,8 +202,10 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, lights, onDelete, onUpdate
               <input
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
-                className="group-name-input"
                 autoFocus
+                aria-label="Group name editor"
+                placeholder="Enter a descriptive name for this group"
+                title="Edit lighting group name"
               />
               <IconButton size="small" color="primary" onClick={saveEditing}>
                 <SaveIcon />
@@ -295,9 +297,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, lights, onDelete, onUpdate
                 }}
                 MenuProps={{
                   PaperProps: {
-                    style: {
-                      maxHeight: 250
-                    }
+                    className: "light-select-menu"
                   }
                 }}
                 disabled={availableLights.length === 0}
@@ -321,18 +321,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, lights, onDelete, onUpdate
           </Box>
 
           {/* Lights in this group */}
-          <Paper
-            sx={{
-              minHeight: 100,
-              p: 1,
-              bgcolor: 'rgba(0, 0, 0, 0.02)',
-              border: '1px dashed',
-              borderColor: 'rgba(0, 0, 0, 0.12)',
-              borderRadius: 1
-            }}
-          >
+          <Paper className="light-paper">
             {groupLights.length === 0 ? (
-              <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
+              <Typography className="empty-group-message">
                 No lights in this group. Use the dropdown above to add lights.
               </Typography>
             ) : (
@@ -340,16 +331,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, lights, onDelete, onUpdate
                 {groupLights.map((light) => (
                   <Box 
                     key={light.id} 
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      bgcolor: 'background.paper', 
-                      p: 1, 
-                      borderRadius: 1,
-                      boxShadow: 1
-                    }}
+                    className="light-item"
                   >
-                    <Box sx={{ flexGrow: 1 }}>
+                    <Box className="light-item-content">
                       <Typography variant="subtitle2">{light.name}</Typography>
                       <Typography variant="body2" color="text.secondary">{light.ipAddress}</Typography>
                     </Box>
