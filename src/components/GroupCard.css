@@ -1,0 +1,61 @@
+.group-card {
+  width: 100%;
+  min-height: 250px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.group-card--active {
+  background-color: rgba(255, 252, 217, 0.3);
+}
+
+.group-name-input {
+  font-size: 1.5rem;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  flex-grow: 1;
+}
+
+.no-drag-area {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.slider-interactive-elements .MuiSlider-thumb,
+.slider-interactive-elements .MuiSlider-track,
+.slider-interactive-elements .MuiSlider-rail {
+  pointer-events: auto;
+}
+
+.light-paper {
+  min-height: 100px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+
+.light-item {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.light-item-content {
+  flex-grow: 1;
+}
+
+.light-select-menu {
+  max-height: 250px;
+}
+
+.empty-group-message {
+  padding: 16px;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.6);
+}
