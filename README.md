@@ -1,46 +1,79 @@
-# Getting Started with Create React App
+# Wiz Light Control
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A web application to control Wiz smart lights over your local network. This project consists of a React frontend and a Node.js backend server that communicates with Wiz lights.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+### Client-Side Features
 
-### `npm start`
+- **Individual Light Control**: Toggle lights on/off, adjust brightness and color temperature for each light
+- **Group Management**: Create groups of lights for easier control of multiple lights at once
+- **Real-time Updates**: Light status updates in real-time through WebSocket connection
+- **Responsive UI**: User-friendly interface built with Material UI
+- **Light Management**: Add new lights by IP address, remove lights you no longer need
+- **Signal Strength Indicator**: See the WiFi signal strength of each light
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Server-Side Features
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- **UDP Communication**: Directly communicates with Wiz lights using the UDP protocol
+- **Automatic Discovery**: Automatically detects and connects to Wiz lights by IP address
+- **State Persistence**: Saves light and group configurations to JSON files
+- **WebSocket Support**: Provides real-time updates to connected clients when light states change
+- **RESTful API**: Exposes endpoints for managing and controlling lights and groups
+- **Status Monitoring**: Periodically checks and updates the status of all connected lights
 
-### `npm test`
+## Installation
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Prerequisites
 
-### `npm run build`
+- Node.js 14.x or later
+- npm 6.x or later
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Setup Instructions
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. Clone the repository:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   ```shell
+   git clone https://github.com/yourusername/wiz-light-control.git
+   cd wiz-light-control
+   ```
 
-### `npm run eject`
+2. Install dependencies:
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+   ```shell
+   npm install
+   ```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Start the server:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+   ```shell
+   cd server
+   node index.js
+   ```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+4. In a new terminal, start the client:
 
-## Learn More
+   ```shell
+   npm start
+   ```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+5. Open your browser and navigate to http://localhost:3000
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Usage
+
+1. Add your Wiz lights by clicking the "+" button and entering the IP address
+2. Create groups by clicking the "Add Group" button
+3. Add lights to groups using the dropdown menu in each group card
+4. Control individual lights or entire groups with the provided controls
+
+## Technical Details
+
+The application uses a React frontend with Material UI components. The backend server uses Express and communicates with Wiz lights using UDP messages on port 38899. Socket.IO is used for real-time communication between the server and clients.
+
+## Development
+
+This application was developed with assistance from AI tools including GitHub Copilot, which helped with code generation, debugging, and implementation of the WebSocket communication between the client and server components.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
