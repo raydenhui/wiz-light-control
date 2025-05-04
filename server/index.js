@@ -335,8 +335,6 @@ app.post('/api/groups/:id/control', async (req, res) => {
         method: "setState",
         params: { state: targetState }
       };
-      
-      console.log(`Toggling group ${id} to state: ${targetState}`);
     } else if (action === 'brightness') {
       message = {
         id: 1,
@@ -383,14 +381,65 @@ app.post('/api/groups/:id/control', async (req, res) => {
   }
 });
 
+// Track connected clients manually to ensure accuracy
+const connectedClients = new Set();
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('Client connected');
+  // Add client to our tracking set
+  connectedClients.add(socket.id);
+  console.log(`Active clients: ${connectedClients.size}`);
+  
+  // Start status updates when at least one client connects
+  startStatusUpdates();
   
   socket.on('disconnect', () => {
     console.log('Client disconnected');
+    // Remove client from our tracking set
+    connectedClients.delete(socket.id);
+    console.log(`Remaining clients: ${connectedClients.size}`);
+    
+    // If no more clients are connected, stop the updates
+    if (connectedClients.size === 0) {
+      stopStatusUpdates();
+    }
   });
 });
+
+// Variable to keep track of the status update interval
+let statusUpdateInterval = null;
+
+// Function to start periodic status updates
+const startStatusUpdates = () => {
+  // Only start if not already running
+  if (!statusUpdateInterval) {
+    console.log('Starting periodic light status updates');
+    // Double check that we have clients before starting
+    if (connectedClients.size > 0) {
+      // Initial update
+      updateLightStatuses();
+      // Then update every 1 seconds (increased to reduce load)
+      statusUpdateInterval = setInterval(updateLightStatuses, 1000);
+      console.log(`Status updates started with ${connectedClients.size} active clients`);
+    } else {
+      console.log('No clients connected, not starting updates');
+    }
+  } else {
+    console.log('Status updates already running');
+  }
+};
+
+// Function to stop periodic status updates
+const stopStatusUpdates = () => {
+  if (statusUpdateInterval) {
+    console.log('Stopping periodic light status updates - no clients connected');
+    clearInterval(statusUpdateInterval);
+    statusUpdateInterval = null;
+  } else {
+    console.log('No status updates running, nothing to stop');
+  }
+};
 
 // Periodically update light statuses
 const updateLightStatuses = async () => {
@@ -419,9 +468,6 @@ const updateLightStatuses = async () => {
     saveLights();
   }
 };
-
-// Update light statuses every 10 seconds
-setInterval(updateLightStatuses, 10000);
 
 // Start the server
 const PORT = process.env.PORT || 3001;

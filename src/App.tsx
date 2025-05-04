@@ -11,9 +11,10 @@ import {
   Snackbar,
   CircularProgress,
   Paper,
-  Divider
+  Divider,
+  Chip
 } from '@mui/material';
-import { Add as AddIcon, Refresh as RefreshIcon, Group as GroupIcon } from '@mui/icons-material';
+import { Add as AddIcon, Refresh as RefreshIcon, Group as GroupIcon, Wifi as WifiIcon, WifiOff as WifiOffIcon } from '@mui/icons-material';
 import LightCard from './components/LightCard';
 import GroupCard from './components/GroupCard';
 import AddLightDialog from './components/AddLightDialog';
@@ -23,7 +24,8 @@ import {
   getGroups, 
   Light, 
   LightGroup, 
-  initSocketConnection
+  initSocketConnection,
+  getSocketConnectionStatus
 } from './services/api';
 import { Socket } from 'socket.io-client';
 
@@ -36,11 +38,25 @@ function App() {
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [socket, setSocket] = useState<typeof Socket | null>(null);
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error' | 'info'} | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   // Initialize socket connection and fetch lights on component mount
   useEffect(() => {
     const newSocket = initSocketConnection();
     setSocket(newSocket);
+
+    // Add connection status tracking
+    const updateConnectionStatus = () => {
+      const connected = getSocketConnectionStatus();
+      setIsConnected(connected);
+    };
+
+    // Set initial connection status
+    updateConnectionStatus();
+
+    // Update connection status whenever it changes
+    newSocket.on('connect', updateConnectionStatus);
+    newSocket.on('disconnect', updateConnectionStatus);
 
     // Handle real-time updates
     newSocket.on('light-added', (light: Light) => {
@@ -167,6 +183,13 @@ function App() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Wiz Light Control
           </Typography>
+          <Chip
+            icon={isConnected ? <WifiIcon /> : <WifiOffIcon />}
+            label={isConnected ? "Connected" : "Disconnected"}
+            color={isConnected ? "success" : "default"}
+            size="small"
+            sx={{ mr: 2 }}
+          />
           <Button 
             color="inherit" 
             startIcon={<RefreshIcon />}

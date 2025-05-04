@@ -7,6 +7,7 @@ const API_URL = 'http://localhost:3001/api';
 
 // Socket.io connection
 let socket: typeof Socket;
+let isConnected = false;
 
 // Initialize socket connection
 export const initSocketConnection = () => {
@@ -14,13 +15,20 @@ export const initSocketConnection = () => {
   
   socket.on('connect', () => {
     console.log('Socket.io connection established');
+    isConnected = true;
   });
   
   socket.on('disconnect', () => {
     console.log('Socket.io connection lost');
+    isConnected = false;
   });
   
   return socket;
+};
+
+// Get socket connection status
+export const getSocketConnectionStatus = () => {
+  return isConnected;
 };
 
 // Light interface
