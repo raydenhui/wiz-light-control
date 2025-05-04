@@ -42,7 +42,8 @@
     "eject": "react-scripts eject",
     "server": "nodemon server/index.js",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
-    "start-prod": "node server/index.js"
+    "start-prod": "node server/index.js",
+    "start-all": "concurrently \"npm run start-prod\" \"serve -s build -l 80\""
   },
   "eslintConfig": {
     "extends": [

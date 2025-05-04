@@ -34,7 +34,7 @@ A web application to control Wiz smart lights over your local network. This proj
 1. Clone the repository:
 
    ```shell
-   git clone https://github.com/yourusername/wiz-light-control.git
+   git clone https://github.com/raydenhui/wiz-light-control
    cd wiz-light-control
    ```
 
