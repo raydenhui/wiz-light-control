@@ -31,6 +31,11 @@ try {
   if (fs.existsSync(LIGHTS_DATA_FILE)) {
     const data = fs.readFileSync(LIGHTS_DATA_FILE, 'utf8');
     lights = JSON.parse(data);
+    // Ensure all lights have the turnOffOnShutdown property initialized
+    lights = lights.map(light => ({
+      ...light,
+      turnOffOnShutdown: light.turnOffOnShutdown !== undefined ? light.turnOffOnShutdown : false
+    }));
   } else {
     fs.writeFileSync(LIGHTS_DATA_FILE, JSON.stringify([]));
   }
@@ -140,7 +145,8 @@ app.post('/api/lights', async (req, res) => {
       id: uuidv4(),
       ipAddress,
       name: name || `Wiz Light ${lights.length + 1}`,
-      status: status.result || {}
+      status: status.result || {},
+      turnOffOnShutdown: false
     };
 
     lights.push(newLight);
@@ -227,6 +233,25 @@ app.post('/api/lights/:id/control', async (req, res) => {
     console.error(`Error controlling light at ${light.ipAddress}:`, error);
     res.status(500).json({ error: 'Failed to control light' });
   }
+});
+
+// Toggle turnOffOnShutdown setting
+app.post('/api/lights/:id/turnOffOnShutdown', (req, res) => {
+  const { id } = req.params;
+  
+  const light = lights.find(light => light.id === id);
+  if (!light) {
+    return res.status(404).json({ error: 'Light not found' });
+  }
+  
+  // Toggle the turnOffOnShutdown setting
+  light.turnOffOnShutdown = !light.turnOffOnShutdown;
+  saveLights();
+  
+  // Broadcast light updated event
+  io.emit('light-updated', light);
+  
+  res.json({ success: true, turnOffOnShutdown: light.turnOffOnShutdown });
 });
 
 // Group API endpoints
@@ -467,6 +492,48 @@ const updateLightStatuses = async () => {
     saveLights();
   }
 };
+
+// Handle server shutdown to turn off lights
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
+
+// Function to handle server shutdown
+async function handleShutdown() {
+  console.log('Server shutting down...');
+  console.log('Turning off lights marked with turnOffOnShutdown=true...');
+  
+  // Find lights that should be turned off
+  const lightsToTurnOff = lights.filter(light => light.turnOffOnShutdown === true);
+  
+  if (lightsToTurnOff.length > 0) {
+    console.log(`Turning off ${lightsToTurnOff.length} lights...`);
+    
+    // Create a message to turn off a light
+    const offMessage = {
+      id: 1,
+      method: "setState",
+      params: { state: false }
+    };
+    
+    // Turn off all marked lights
+    await Promise.all(lightsToTurnOff.map(async (light) => {
+      try {
+        console.log(`Turning off light: ${light.name} (${light.ipAddress})`);
+        await sendUdpMessage(light.ipAddress, offMessage);
+      } catch (error) {
+        console.error(`Error turning off light ${light.name}:`, error);
+      }
+    }));
+    
+    // Give some time for the UDP messages to be sent
+    await new Promise(resolve => setTimeout(resolve, 500));
+  } else {
+    console.log('No lights to turn off on shutdown');
+  }
+  
+  console.log('Shutting down server...');
+  process.exit(0);
+}
 
 // Start the server
 const PORT = process.env.PORT || 3001;

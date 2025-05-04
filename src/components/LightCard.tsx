@@ -18,9 +18,10 @@ import {
   WbIncandescent as WbIncandescentIcon,
   SignalWifi4Bar as SignalIcon,
   SignalWifi1Bar as WeakSignalIcon,
-  DragIndicator as DragIcon
+  DragIndicator as DragIcon,
+  PowerSettingsNew as PowerIcon
 } from '@mui/icons-material';
-import { Light, toggleLight, setBrightness, setTemperature, deleteLight } from '../services/api';
+import { Light, toggleLight, setBrightness, setTemperature, deleteLight, toggleTurnOffOnShutdown } from '../services/api';
 
 interface LightCardProps {
   light: Light;
@@ -103,6 +104,15 @@ const LightCard: React.FC<LightCardProps> = ({ light, onDelete, isInGroup = fals
       onDelete(light.id);
     } catch (error) {
       console.error('Failed to delete light', error);
+    }
+  };
+
+  // Handler for toggling turnOffOnShutdown setting
+  const handleToggleTurnOffOnShutdown = async () => {
+    try {
+      await toggleTurnOffOnShutdown(light.id);
+    } catch (error) {
+      console.error('Failed to toggle turn off on shutdown setting', error);
     }
   };
 
@@ -260,7 +270,17 @@ const LightCard: React.FC<LightCardProps> = ({ light, onDelete, isInGroup = fals
         </Box>
       </CardContent>
       
-      <CardActions sx={{ justifyContent: 'flex-end' }}>
+      <CardActions sx={{ justifyContent: 'space-between' }}>
+        <Tooltip title={light.turnOffOnShutdown ? "This light will turn off when server shuts down" : "This light will stay on when server shuts down"}>
+          <IconButton
+            size="small"
+            color={light.turnOffOnShutdown ? "primary" : "default"}
+            onClick={handleToggleTurnOffOnShutdown}
+            aria-label="toggle turn off on shutdown"
+          >
+            <PowerIcon />
+          </IconButton>
+        </Tooltip>
         <IconButton 
           size="small" 
           color="error" 

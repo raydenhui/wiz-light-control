@@ -36,6 +36,7 @@ export interface Light {
   id: string;
   ipAddress: string;
   name: string;
+  turnOffOnShutdown?: boolean;
   status: {
     state?: boolean;
     dimming?: number;
@@ -114,6 +115,17 @@ export const setTemperature = async (id: string, temp: number): Promise<void> =>
     });
   } catch (error) {
     console.error('Error setting temperature:', error);
+    throw error;
+  }
+};
+
+// Toggle turnOffOnShutdown setting
+export const toggleTurnOffOnShutdown = async (id: string): Promise<boolean> => {
+  try {
+    const response = await axios.post(`${API_URL}/lights/${id}/turnOffOnShutdown`);
+    return response.data.turnOffOnShutdown;
+  } catch (error) {
+    console.error('Error toggling turn off on shutdown setting:', error);
     throw error;
   }
 };
