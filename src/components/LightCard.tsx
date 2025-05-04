@@ -19,9 +19,11 @@ import {
   SignalWifi4Bar as SignalIcon,
   SignalWifi1Bar as WeakSignalIcon,
   DragIndicator as DragIcon,
-  PowerSettingsNew as PowerIcon
+  PowerSettingsNew as PowerIcon,
+  PowerSettingsNew as ShutdownIcon,
+  PlayArrow as StartupIcon
 } from '@mui/icons-material';
-import { Light, toggleLight, setBrightness, setTemperature, deleteLight, toggleTurnOffOnShutdown } from '../services/api';
+import { Light, toggleLight, setBrightness, setTemperature, deleteLight, toggleTurnOffOnShutdown, toggleAutoTurnOnAtStartup } from '../services/api';
 
 interface LightCardProps {
   light: Light;
@@ -113,6 +115,15 @@ const LightCard: React.FC<LightCardProps> = ({ light, onDelete, isInGroup = fals
       await toggleTurnOffOnShutdown(light.id);
     } catch (error) {
       console.error('Failed to toggle turn off on shutdown setting', error);
+    }
+  };
+
+  // Handler for toggling autoTurnOnAtStartup setting
+  const handleToggleAutoTurnOnAtStartup = async () => {
+    try {
+      await toggleAutoTurnOnAtStartup(light.id);
+    } catch (error) {
+      console.error('Failed to toggle auto turn on at startup setting', error);
     }
   };
 
@@ -271,16 +282,28 @@ const LightCard: React.FC<LightCardProps> = ({ light, onDelete, isInGroup = fals
       </CardContent>
       
       <CardActions sx={{ justifyContent: 'space-between' }}>
-        <Tooltip title={light.turnOffOnShutdown ? "This light will turn off when server shuts down" : "This light will stay on when server shuts down"}>
-          <IconButton
-            size="small"
-            color={light.turnOffOnShutdown ? "primary" : "default"}
-            onClick={handleToggleTurnOffOnShutdown}
-            aria-label="toggle turn off on shutdown"
-          >
-            <PowerIcon />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: 'flex' }}>
+          <Tooltip title={light.turnOffOnShutdown ? "This light will turn off when server shuts down" : "This light will stay on when server shuts down"}>
+            <IconButton
+              size="small"
+              color={light.turnOffOnShutdown ? "primary" : "default"}
+              onClick={handleToggleTurnOffOnShutdown}
+              aria-label="toggle turn off on shutdown"
+            >
+              <ShutdownIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={light.autoTurnOnAtStartup ? "This light will automatically turn on when server starts" : "This light will remain off when server starts"}>
+            <IconButton
+              size="small"
+              color={light.autoTurnOnAtStartup ? "success" : "default"}
+              onClick={handleToggleAutoTurnOnAtStartup}
+              aria-label="toggle auto turn on at startup"
+            >
+              <StartupIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
         <IconButton 
           size="small" 
           color="error" 

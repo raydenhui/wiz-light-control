@@ -37,6 +37,7 @@ export interface Light {
   ipAddress: string;
   name: string;
   turnOffOnShutdown?: boolean;
+  autoTurnOnAtStartup?: boolean;
   status: {
     state?: boolean;
     dimming?: number;
@@ -126,6 +127,17 @@ export const toggleTurnOffOnShutdown = async (id: string): Promise<boolean> => {
     return response.data.turnOffOnShutdown;
   } catch (error) {
     console.error('Error toggling turn off on shutdown setting:', error);
+    throw error;
+  }
+};
+
+// Toggle autoTurnOnAtStartup setting
+export const toggleAutoTurnOnAtStartup = async (id: string): Promise<boolean> => {
+  try {
+    const response = await axios.post(`${API_URL}/lights/${id}/autoTurnOnAtStartup`);
+    return response.data.autoTurnOnAtStartup;
+  } catch (error) {
+    console.error('Error toggling auto turn on at startup setting:', error);
     throw error;
   }
 };

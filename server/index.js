@@ -31,10 +31,11 @@ try {
   if (fs.existsSync(LIGHTS_DATA_FILE)) {
     const data = fs.readFileSync(LIGHTS_DATA_FILE, 'utf8');
     lights = JSON.parse(data);
-    // Ensure all lights have the turnOffOnShutdown property initialized
+    // Ensure all lights have the turnOffOnShutdown and autoTurnOnAtStartup properties initialized
     lights = lights.map(light => ({
       ...light,
-      turnOffOnShutdown: light.turnOffOnShutdown !== undefined ? light.turnOffOnShutdown : false
+      turnOffOnShutdown: light.turnOffOnShutdown !== undefined ? light.turnOffOnShutdown : false,
+      autoTurnOnAtStartup: light.autoTurnOnAtStartup !== undefined ? light.autoTurnOnAtStartup : false
     }));
   } else {
     fs.writeFileSync(LIGHTS_DATA_FILE, JSON.stringify([]));
@@ -252,6 +253,25 @@ app.post('/api/lights/:id/turnOffOnShutdown', (req, res) => {
   io.emit('light-updated', light);
   
   res.json({ success: true, turnOffOnShutdown: light.turnOffOnShutdown });
+});
+
+// Toggle autoTurnOnAtStartup setting
+app.post('/api/lights/:id/autoTurnOnAtStartup', (req, res) => {
+  const { id } = req.params;
+  
+  const light = lights.find(light => light.id === id);
+  if (!light) {
+    return res.status(404).json({ error: 'Light not found' });
+  }
+  
+  // Toggle the autoTurnOnAtStartup setting
+  light.autoTurnOnAtStartup = !light.autoTurnOnAtStartup;
+  saveLights();
+  
+  // Broadcast light updated event
+  io.emit('light-updated', light);
+  
+  res.json({ success: true, autoTurnOnAtStartup: light.autoTurnOnAtStartup });
 });
 
 // Group API endpoints
@@ -537,7 +557,36 @@ async function handleShutdown() {
 
 // Start the server
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Monitoring ${lights.length} Wiz lights`);
+  
+  // Turn on all lights marked with autoTurnOnAtStartup=true
+  const lightsToTurnOn = lights.filter(light => light.autoTurnOnAtStartup === true);
+  
+  if (lightsToTurnOn.length > 0) {
+    console.log(`Auto-turning on ${lightsToTurnOn.length} lights...`);
+    
+    // Create a message to turn on a light
+    const onMessage = {
+      id: 1,
+      method: "setState",
+      params: { state: true }
+    };
+    
+    // Turn on all marked lights
+    await Promise.all(lightsToTurnOn.map(async (light) => {
+      try {
+        console.log(`Turning on light: ${light.name} (${light.ipAddress})`);
+        await sendUdpMessage(light.ipAddress, onMessage);
+      } catch (error) {
+        console.error(`Error turning on light ${light.name}:`, error);
+      }
+    }));
+    
+    // Update light statuses after a short delay
+    setTimeout(updateLightStatuses, 1000);
+  } else {
+    console.log('No lights to auto-turn on at startup');
+  }
 });
