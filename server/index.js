@@ -104,7 +104,6 @@ const getLightStatus = async (ipAddress) => {
     const response = await sendUdpMessage(ipAddress, message);
     return response;
   } catch (error) {
-    console.error(`Error getting status for light at ${ipAddress}:`, error);
     return null;
   }
 };
@@ -419,8 +418,8 @@ const startStatusUpdates = () => {
     if (connectedClients.size > 0) {
       // Initial update
       updateLightStatuses();
-      // Then update every 1 seconds (increased to reduce load)
-      statusUpdateInterval = setInterval(updateLightStatuses, 1000);
+      // Then update every 5 seconds (increased to reduce load)
+      statusUpdateInterval = setInterval(updateLightStatuses, 5000);
       console.log(`Status updates started with ${connectedClients.size} active clients`);
     } else {
       console.log('No clients connected, not starting updates');
