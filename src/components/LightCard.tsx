@@ -174,15 +174,6 @@ const LightCard: React.FC<LightCardProps> = ({ light, onDelete, isInGroup = fals
               sx={{ mr: 1 }}
             />
           </Tooltip>
-          {light.status.mac && (
-            <Tooltip title="MAC Address">
-              <Chip 
-                label={light.status.mac} 
-                size="small" 
-                variant="outlined"
-              />
-            </Tooltip>
-          )}
         </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
