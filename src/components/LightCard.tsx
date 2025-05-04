@@ -19,7 +19,6 @@ import {
   SignalWifi4Bar as SignalIcon,
   SignalWifi1Bar as WeakSignalIcon,
   DragIndicator as DragIcon,
-  PowerSettingsNew as PowerIcon,
   PowerSettingsNew as ShutdownIcon,
   PlayArrow as StartupIcon
 } from '@mui/icons-material';
@@ -34,15 +33,11 @@ interface LightCardProps {
 const LightCard: React.FC<LightCardProps> = ({ light, onDelete, isInGroup = false }) => {
   const [loading, setLoading] = useState(false);
   const [isControlDisabled, setIsControlDisabled] = useState(false);
-  const [currentBrightness, setCurrentBrightness] = useState(light.status.dimming || 0);
-  const [currentTemperature, setCurrentTemperature] = useState(light.status.temp || 2700);
   const [displayBrightness, setDisplayBrightness] = useState(light.status.dimming || 0);
   const [displayTemperature, setDisplayTemperature] = useState(light.status.temp || 2700);
 
   // Update local state when light prop changes
   useEffect(() => {
-    setCurrentBrightness(light.status.dimming || 0);
-    setCurrentTemperature(light.status.temp || 2700);
     setDisplayBrightness(light.status.dimming || 0);
     setDisplayTemperature(light.status.temp || 2700);
   }, [light.status.dimming, light.status.temp]);
@@ -69,7 +64,6 @@ const LightCard: React.FC<LightCardProps> = ({ light, onDelete, isInGroup = fals
     if (isControlDisabled) return;
     
     const newValue = value as number;
-    setCurrentBrightness(newValue);
     setIsControlDisabled(true);
     try {
       await setBrightness(light.id, newValue);
@@ -89,7 +83,6 @@ const LightCard: React.FC<LightCardProps> = ({ light, onDelete, isInGroup = fals
     if (isControlDisabled) return;
     
     const newValue = value as number;
-    setCurrentTemperature(newValue);
     setIsControlDisabled(true);
     try {
       await setTemperature(light.id, newValue);
