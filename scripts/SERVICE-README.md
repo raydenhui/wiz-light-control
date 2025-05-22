@@ -78,6 +78,7 @@ npm run service-uninstall
 ### Using Windows Services
 
 You can also manage the service from Windows Services:
+
 1. Press `Win+R`, type `services.msc` and press Enter
 2. Find "WizLightControl" in the list
 3. Right-click and select Start, Stop, or Restart
@@ -85,6 +86,7 @@ You can also manage the service from Windows Services:
 ## How It Works
 
 The service uses `node-windows` to:
+
 1. Register your application as a proper Windows service
 2. Ensure it receives proper shutdown signals when Windows is shutting down
 3. Give your application time to gracefully shut down and turn off lights
