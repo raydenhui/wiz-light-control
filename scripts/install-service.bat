@@ -11,10 +11,10 @@ echo.
 REM Check for admin privileges
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo This script requires administrator privileges.
-    echo Please right-click and select "Run as administrator"
-    pause
-    exit /b 1
+  echo This script requires administrator privileges.
+  echo Please right-click and select "Run as administrator"
+  pause
+  exit /b 1
 )
 
 set SCRIPT_DIR=%~dp0
