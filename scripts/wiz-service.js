@@ -25,9 +25,8 @@ const svc = new Service({
 	wait: 10,	
 	grow: 0.5,	
 	nodeOptions: [],
-	stopparent: true,   // Set to true to ensure signals are sent to the child process
-	stoptimeout: 45,    // Increased timeout to allow for graceful shutdown
-	killtree: true,     // Ensure all child processes are terminated
+	stopparentfirst: true,   // Set to true to ensure signals are sent to the child process
+	stoptimeout: 30,    // Increased timeout to allow for graceful shutdown
 });
 
 // Listen for install/uninstall events
@@ -61,20 +60,7 @@ svc.on("stop", () => {
 			console.log("WizLight Control service stopped");
 		}, 2000);
 	} catch (error) {
-		console.error('Error creating shutdown signal:', error);
-		// Fallback: execute shutdown script directly
-		try {
-			const { execSync } = require('child_process');
-			const shutdownScriptPath = path.join(__dirname, 'direct-shutdown.bat');
-			console.log('Fallback: executing direct shutdown script');
-			execSync(`"${shutdownScriptPath}"`, {
-				stdio: 'inherit',
-				cwd: __dirname,
-				timeout: 10000
-			});
-		} catch (fallbackError) {
-			console.error('Error executing fallback shutdown:', fallbackError);
-		}
+		console.log("Error creating shutdown signal file:", error);
 	}
 });
 

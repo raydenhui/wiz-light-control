@@ -70,7 +70,7 @@ const saveGroups = () => {
 };
 
 // UDP client for communicating with Wiz lights
-const udpClient = dgram.createSocket('udp4');
+let udpClient = dgram.createSocket('udp4');
 
 // Setup UDP socket error handling
 udpClient.on('error', (err) => {
@@ -547,6 +547,17 @@ if (process.platform === 'win32') {
   
   // Watch for shutdown signal file as a fallback for Windows services
   const shutdownFilePath = path.join(__dirname, '.shutdown');
+  
+  // Clean up any existing shutdown file on startup
+  try {
+    if (fs.existsSync(shutdownFilePath)) {
+      console.log('Removing stale shutdown signal file from previous session');
+      fs.unlinkSync(shutdownFilePath);
+    }
+  } catch (error) {
+    // Ignore errors cleaning up shutdown file
+  }
+  
   setInterval(() => {
     try {
       if (fs.existsSync(shutdownFilePath)) {
@@ -579,8 +590,8 @@ async function handleShutdown(isServiceStop = false) {
     return;
   }
   global.isShuttingDown = true;
-
   console.log(isServiceStop ? 'Service stop requested...' : 'Server shutting down...');
+  
   console.log('Turning off lights marked with turnOffOnShutdown=true...');
   
   // Find lights that should be turned off
@@ -685,8 +696,7 @@ const startServer = async () => {
   server.listen(PORT, async () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Monitoring ${lights.length} Wiz lights`);
-    
-    // Add a delay to ensure UDP socket is fully initialized
+      // Add a delay to ensure UDP socket is fully initialized
     console.log('Waiting for UDP socket initialization...');
     await new Promise(resolve => setTimeout(resolve, 2000));
     
@@ -712,8 +722,7 @@ const startServer = async () => {
           console.error(`Error turning on light ${light.name}:`, error);
         }
       }));
-      
-      // Update light statuses after a short delay
+        // Update light statuses after a short delay
       setTimeout(updateLightStatuses, 1000);
     } else {
       console.log('No lights to auto-turn on at startup');
