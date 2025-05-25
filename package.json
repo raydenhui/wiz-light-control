@@ -43,13 +43,13 @@
 		"eject": "react-scripts eject",
 		"server": "nodemon server/index.js",
 		"dev": "concurrently \"npm run server\" \"npm run start\"",
-		"start-prod": "node server/index.js",
-		"start-all": "concurrently \"npm run start-prod\" \"serve -s build -l 80\"",
-		"service-install": "powershell -ExecutionPolicy Bypass -File scripts/wiz-service-manager.ps1 install",
-		"service-uninstall": "powershell -ExecutionPolicy Bypass -File scripts/wiz-service-manager.ps1 uninstall",
-		"service-start": "powershell -ExecutionPolicy Bypass -File scripts/wiz-service-manager.ps1 start",
-		"service-stop": "powershell -ExecutionPolicy Bypass -File scripts/wiz-service-manager.ps1 stop",
-		"service-status": "powershell -ExecutionPolicy Bypass -File scripts/wiz-service-manager.ps1 status"
+		"start-prod": "node server/index.js",		"start-all": "concurrently \"npm run start-prod\" \"serve -s build -l 80\"",
+		"service-install": "powershell -ExecutionPolicy Bypass -File scripts/service-manager.bat install",
+		"service-uninstall": "powershell -ExecutionPolicy Bypass -File scripts/service-manager.bat uninstall",
+		"service-start": "powershell -ExecutionPolicy Bypass -File scripts/service-manager.bat start",
+		"service-stop": "powershell -ExecutionPolicy Bypass -File scripts/service-manager.bat stop",
+		"service-status": "powershell -ExecutionPolicy Bypass -File scripts/service-manager.bat status",
+		"service-update": "powershell -ExecutionPolicy Bypass -File scripts/service-manager.bat update"
 	},
 	"eslintConfig": {
 		"extends": [
