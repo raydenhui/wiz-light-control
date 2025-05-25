@@ -1,29 +1,70 @@
-# WizLight Control Service
+# WizLight Control Service Scripts
 
-This document explains how to install and manage the WizLight Control service to ensure your smart lights are properly managed, especially during system shutdowns.
+This directory contains scripts for managing the WizLight Control service and system integration.
 
-## About the Service
+## Files
 
-The WizLight Control service ensures that:
+### service-manager.bat
+Main service management script that handles all operations:
+- **install**: Installs the Windows service and registers system startup/shutdown tasks
+- **uninstall**: Removes the service and all scheduled tasks
+- **start/stop**: Controls the service
+- **status**: Shows current service status
+- **update**: Updates an existing installation
 
-1. Your lights are properly turned off when your PC shuts down (based on your settings)
-2. The service starts automatically when your PC boots
-3. Your lights turn on at startup if they're marked with `autoTurnOnAtStartup=true`
+### wiz-service.js
+Node.js script that creates and manages the Windows service using node-windows.
+
+### startup-lights.bat
+Script that runs during system startup to turn on lights marked with `autoTurnOnAtStartup=true`.
+This script is automatically registered as a Windows scheduled task.
+
+### startup-lights.js
+Node.js script that handles the actual light control logic for startup.
+
+### direct-shutdown.bat
+Script that runs during system shutdown to turn off lights marked with `turnOffOnShutdown=true`.
+This script is automatically registered as a Windows scheduled task.
+
+### shutdown-lights.js
+Node.js script that handles the actual light control logic for shutdown.
+
+### test-system.bat
+Test script to verify that both startup and shutdown light controls work correctly without rebooting.
+
+## How It Works
+
+The system now works with actual computer startup/shutdown rather than just service start/stop:
+
+1. **System Startup**: When Windows starts, scheduled tasks run `startup-lights.bat` which:
+   - Waits for network initialization
+   - Reads the lights configuration
+   - Turns on all lights marked with `autoTurnOnAtStartup=true`
+
+2. **System Shutdown**: When Windows shuts down, scheduled tasks run `direct-shutdown.bat` which:
+   - Reads the lights configuration  
+   - Turns off all lights marked with `turnOffOnShutdown=true`
+   - Runs independently of the main service
+
+3. **Service**: The main service runs continuously in the background providing:
+   - Web API at http://localhost:3001
+   - Real-time light control and monitoring
+   - WebSocket updates for the frontend
 
 ## Light Settings
 
 In the WizLight Control application, you can mark lights with two special settings:
 
-- **Turn Off On Shutdown**: When enabled, these lights will automatically turn off when your PC shuts down or when the service stops
-- **Auto Turn On At Startup**: When enabled, these lights will automatically turn on when the service starts
+- **Turn Off On Shutdown**: When enabled, these lights will automatically turn off when your computer shuts down
+- **Auto Turn On At Startup**: When enabled, these lights will automatically turn on when your computer starts
 
 ## Installation
 
 ### Prerequisites
 
 - Node.js must be installed
-- The application must be built (`npm run build`)
 - Run `npm install` to install all dependencies (including node-windows)
+- Administrator privileges required
 
 ### Quick Installation
 
@@ -33,7 +74,20 @@ cd scripts
 service-manager.bat install
 ```
 
-This will handle all the installation steps automatically, including enhanced shutdown handling.
+This will:
+- Install all npm dependencies
+- Create the Windows service
+- Register system startup/shutdown tasks
+- Start the service
+
+## Configuration
+
+Use the web interface at http://localhost:3001 to:
+- Add/remove lights
+- Configure which lights turn on at startup (`autoTurnOnAtStartup`)
+- Configure which lights turn off at shutdown (`turnOffOnShutdown`)
+- Control lights manually
+- Create and manage light groups
 
 ## Managing the Service
 
@@ -56,37 +110,17 @@ You can also manage the service from Windows Services:
 2. Find "WizLightControl" in the list
 3. Right-click and select Start, Stop, or Restart
 
-### Using npm scripts
-
-```powershell
-# From project root
-npm run service-install   # Install service
-npm run service-start     # Start service
-npm run service-stop      # Stop service
-npm run service-status    # Show status
-npm run service-uninstall # Uninstall service
-```
-
-## How It Works
-
-The service uses several mechanisms to ensure reliable operation:
-
-1. **Windows Service Integration**: Uses `node-windows` to register as a proper Windows service
-2. **Shutdown Handling**: Multiple mechanisms ensure lights turn off during shutdown:
-   - Service shutdown event handlers
-   - Direct shutdown script
-   - Windows scheduled task (for added reliability)
-3. **Startup Control**: Automatically turns on designated lights after startup
-
 ## Troubleshooting
 
-### Lights Not Turning Off During Shutdown
+If lights don't turn on/off during system startup/shutdown:
 
-If your lights aren't turning off during system shutdown:
-
-1. Make sure the lights are marked with `turnOffOnShutdown=true` in the application
-2. Check that your lights are reachable on the network
-3. Try running `service-manager.bat update` to update the service with enhanced shutdown handling
+1. Check that scheduled tasks are registered: 
+   ```powershell
+   schtasks /query /tn "WizLightControl*"
+   ```
+2. Check task logs in Windows Event Viewer
+3. Verify lights are properly configured in the web interface
+4. Ensure network connectivity during startup/shutdown
 
 ### Common Issues
 

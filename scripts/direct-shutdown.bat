@@ -1,18 +1,16 @@
 @echo off
-REM Direct shutdown script for WizLight Control lights
-REM This script directly executes the shutdown.js file to reliably turn off lights
-REM It can be called from various Windows shutdown scenarios
+REM filepath: c:\Users\rayde\Documents\Github\wiz-light-control\scripts\direct-shutdown.bat
+REM Direct shutdown script for WizLight Control
+REM This script runs during system shutdown to turn off lights
 
-setlocal
+setlocal enabledelayedexpansion
+
 set SCRIPT_DIR=%~dp0
-set PROJECT_ROOT=%SCRIPT_DIR%..
-set SHUTDOWN_SCRIPT=%PROJECT_ROOT%\server\shutdown.js
 
-echo WizLight Control - Direct Shutdown
-echo ================================
+echo WizLight Control: System shutdown detected, turning off lights...
 
-REM Run the Node.js shutdown script directly
-cd /d "%PROJECT_ROOT%"
-node "%SHUTDOWN_SCRIPT%"
+REM Change to the scripts directory and run the Node.js script
+cd /d "%SCRIPT_DIR%"
+node shutdown-lights.js
 
-exit /b 0
+echo WizLight Control: Shutdown script completed

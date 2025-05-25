@@ -10,19 +10,21 @@ set PROJECT_ROOT=%SCRIPT_DIR%..
 
 REM Define usage info
 :usage
-if "%1"=="" (
-    echo WizLight Control Service Manager
+if "%1"=="" (    echo WizLight Control Service Manager
     echo ==============================
     echo.
-    echo Usage: service-manager.bat [command]
+    echo This service provides a web interface for controlling Wiz lights
+    echo and sets up automatic light control on system startup/shutdown.
     echo.
-    echo Commands:
-    echo   install   - Install the service with enhanced shutdown handling
-    echo   uninstall - Remove the service
+    echo Usage: service-manager.bat [command]
+    echo.    echo Commands:
+    echo   install   - Install the service and system startup/shutdown tasks
+    echo   uninstall - Remove the service and system tasks
     echo   start     - Start the service
     echo   stop      - Stop the service
     echo   status    - Show service status
-    echo   update    - Update existing service with enhanced shutdown handling
+    echo   update    - Update existing service and system tasks
+    echo   test      - Test the startup/shutdown light controls
     echo.
     goto :eof
 )
@@ -44,6 +46,7 @@ if /i "%COMMAND%"=="start" goto :start
 if /i "%COMMAND%"=="stop" goto :stop
 if /i "%COMMAND%"=="status" goto :status
 if /i "%COMMAND%"=="update" goto :update
+if /i "%COMMAND%"=="test" goto :test
 echo Unknown command: %COMMAND%
 echo Use 'service-manager.bat' without parameters to see available commands.
 exit /b 1
@@ -66,15 +69,26 @@ echo Installing the Windows service...
 node wiz-service.js install
 timeout /t 5
 
-REM Register the shutdown task with Windows (optional but adds reliability)
+REM Register the system startup and shutdown handlers with Windows
 echo.
-echo Registering additional shutdown handler with Windows...
+echo Registering system startup and shutdown handlers with Windows...
+
+REM Create startup task - runs when user logs on
+schtasks /Create /TN "WizLightControlStartup" /TR "%SCRIPT_DIR%startup-lights.bat" /SC ONLOGON /F /RU SYSTEM
+
+REM Create shutdown task - runs on system shutdown
 schtasks /Create /TN "WizLightControlShutdown" /TR "%SCRIPT_DIR%direct-shutdown.bat" /SC ONEVENT /EC System /MO "*[System[Provider[@Name='User32'] and EventID=1074]]" /F /RU SYSTEM
+
+REM Also create a task that runs when the system starts (before user logon) 
+schtasks /Create /TN "WizLightControlSystemStartup" /TR "%SCRIPT_DIR%startup-lights.bat" /SC ONSTART /F /RU SYSTEM
 
 echo.
 echo Installation complete!
-echo The WizLight Control service has been installed with enhanced shutdown handling.
-echo Your lights marked with turnOffOnShutdown=true will turn off during system shutdown.
+echo.
+echo The WizLight Control service has been installed and will run in the background.
+echo System startup/shutdown tasks have been registered to automatically:
+echo   - Turn ON lights marked with 'autoTurnOnAtStartup=true' when system starts
+echo   - Turn OFF lights marked with 'turnOffOnShutdown=true' when system shuts down
 echo.
 goto :eof
 
@@ -90,11 +104,23 @@ timeout /t 5
 REM Uninstall the service
 node wiz-service.js uninstall
 
-REM Remove the scheduled task if it exists
+REM Remove the scheduled tasks if they exist
 schtasks /Query /TN "WizLightControlShutdown" >nul 2>&1
 if %errorLevel% equ 0 (
     echo Removing scheduled shutdown task...
     schtasks /Delete /TN "WizLightControlShutdown" /F
+)
+
+schtasks /Query /TN "WizLightControlStartup" >nul 2>&1
+if %errorLevel% equ 0 (
+    echo Removing scheduled startup task...
+    schtasks /Delete /TN "WizLightControlStartup" /F
+)
+
+schtasks /Query /TN "WizLightControlSystemStartup" >nul 2>&1
+if %errorLevel% equ 0 (
+    echo Removing scheduled system startup task...
+    schtasks /Delete /TN "WizLightControlSystemStartup" /F
 )
 
 echo.
@@ -119,6 +145,18 @@ powershell -Command "Get-Service -Name 'WizLightControl' -ErrorAction SilentlyCo
 if %errorLevel% neq 0 (
     echo Service is not installed.
 )
+
+echo.
+echo Scheduled tasks status:
+schtasks /query /tn "WizLightControlStartup" /fo LIST 2>nul | findstr "Task Name\|Status\|Next Run Time"
+if %errorLevel% neq 0 echo WizLightControlStartup task: Not registered
+
+schtasks /query /tn "WizLightControlShutdown" /fo LIST 2>nul | findstr "Task Name\|Status\|Next Run Time"  
+if %errorLevel% neq 0 echo WizLightControlShutdown task: Not registered
+
+schtasks /query /tn "WizLightControlSystemStartup" /fo LIST 2>nul | findstr "Task Name\|Status\|Next Run Time"
+if %errorLevel% neq 0 echo WizLightControlSystemStartup task: Not registered
+
 goto :eof
 
 :update
@@ -146,14 +184,25 @@ cd /d "%SCRIPT_DIR%"
 echo Installing WizLight Control service with enhanced shutdown handling...
 node wiz-service.js install
 
-REM Register the shutdown task with Windows (optional but adds reliability)
+REM Register the system startup and shutdown handlers with Windows
 echo.
-echo Updating shutdown handler with Windows...
+echo Updating system startup and shutdown handlers with Windows...
+
+REM Create startup task - runs when user logs on
+schtasks /Create /TN "WizLightControlStartup" /TR "%SCRIPT_DIR%startup-lights.bat" /SC ONLOGON /F /RU SYSTEM
+
+REM Create shutdown task - runs on system shutdown
 schtasks /Create /TN "WizLightControlShutdown" /TR "%SCRIPT_DIR%direct-shutdown.bat" /SC ONEVENT /EC System /MO "*[System[Provider[@Name='User32'] and EventID=1074]]" /F /RU SYSTEM
+
+REM Also create a task that runs when the system starts (before user logon) 
+schtasks /Create /TN "WizLightControlSystemStartup" /TR "%SCRIPT_DIR%startup-lights.bat" /SC ONSTART /F /RU SYSTEM
 
 echo.
 echo Update complete!
-echo The WizLight Control service has been updated with enhanced shutdown handling.
-echo Your lights marked with turnOffOnShutdown=true will turn off during system shutdown.
+echo.
+echo The WizLight Control service has been updated and will run in the background.
+echo System startup/shutdown tasks have been registered to automatically:
+echo   - Turn ON lights marked with 'autoTurnOnAtStartup=true' when system starts
+echo   - Turn OFF lights marked with 'turnOffOnShutdown=true' when system shuts down
 echo.
 goto :eof
