@@ -22,9 +22,12 @@ const svc = new Service({
 	description: "WizLight Control Service for smart lighting control",
 	script: scriptPath,
 	workingDirectory: workingDirectory,
-	wait: 2, // Wait time in seconds before SIGKILLing the app
-	grow: 0.5, // Allow service to restart if memory increases by 50%
+	wait: 10,	
+	grow: 0.5,	
 	nodeOptions: [],
+	stopparent: true,   // Set to true to ensure signals are sent to the child process
+	stoptimeout: 45,    // Increased timeout to allow for graceful shutdown
+	killtree: true,     // Ensure all child processes are terminated
 });
 
 // Listen for install/uninstall events
@@ -44,7 +47,35 @@ svc.on("start", () => {
 });
 
 svc.on("stop", () => {
-	console.log("WizLight Control service stopped");
+	console.log("WizLight Control service stopping...");
+	
+	// Create a shutdown signal file to trigger graceful shutdown in the main process
+	try {
+		const fs = require('fs');
+		const shutdownFilePath = path.join(__dirname, '..', 'server', '.shutdown');
+		fs.writeFileSync(shutdownFilePath, 'shutdown');
+		console.log('Shutdown signal file created');
+		
+		// Give the main process a moment to detect the signal and start shutdown
+		setTimeout(() => {
+			console.log("WizLight Control service stopped");
+		}, 2000);
+	} catch (error) {
+		console.error('Error creating shutdown signal:', error);
+		// Fallback: execute shutdown script directly
+		try {
+			const { execSync } = require('child_process');
+			const shutdownScriptPath = path.join(__dirname, 'direct-shutdown.bat');
+			console.log('Fallback: executing direct shutdown script');
+			execSync(`"${shutdownScriptPath}"`, {
+				stdio: 'inherit',
+				cwd: __dirname,
+				timeout: 10000
+			});
+		} catch (fallbackError) {
+			console.error('Error executing fallback shutdown:', fallbackError);
+		}
+	}
 });
 
 svc.on("error", (err) => {

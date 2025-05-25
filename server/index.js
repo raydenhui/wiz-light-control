@@ -72,6 +72,21 @@ const saveGroups = () => {
 // UDP client for communicating with Wiz lights
 const udpClient = dgram.createSocket('udp4');
 
+// Setup UDP socket error handling
+udpClient.on('error', (err) => {
+  console.error('UDP socket error:', err);
+  // Try to recreate the socket if there's an error
+  try {
+    udpClient.close();
+    setTimeout(() => {
+      udpClient = dgram.createSocket('udp4');
+      console.log('UDP socket recreated after error');
+    }, 1000);
+  } catch (e) {
+    console.error('Failed to recreate UDP socket:', e);
+  }
+});
+
 // Send UDP message to a light
 const sendUdpMessage = (ipAddress, message) => {
   return new Promise((resolve, reject) => {
@@ -514,17 +529,62 @@ const updateLightStatuses = async () => {
 };
 
 // Handle server shutdown to turn off lights
-process.on('SIGINT', handleShutdown);
-process.on('SIGTERM', handleShutdown);
+process.on('SIGINT', () => {
+  console.log('SIGINT received');
+  handleShutdown(false);
+});
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received');
+  handleShutdown(false);
+});
+
+// Windows-specific event handling for CTRL+C and service shutdown
+if (process.platform === 'win32') {
+  process.on('SIGBREAK', () => {
+    console.log('SIGBREAK received (Windows service shutdown)');
+    handleShutdown(true);
+  });
+  
+  // Watch for shutdown signal file as a fallback for Windows services
+  const shutdownFilePath = path.join(__dirname, '.shutdown');
+  setInterval(() => {
+    try {
+      if (fs.existsSync(shutdownFilePath)) {
+        console.log('Shutdown signal file detected - initiating graceful shutdown');
+        fs.unlinkSync(shutdownFilePath); // Remove the signal file
+        handleShutdown(true);
+      }
+    } catch (error) {
+      // Ignore errors checking for shutdown file
+    }
+  }, 1000); // Check every second
+}
+
+// Ensure UDP socket cleanup on exit
+process.on('exit', () => {
+  try {
+    if (udpClient) {
+      console.log('Closing UDP socket...');
+      udpClient.close();
+    }
+  } catch (error) {
+    // Ignore errors during cleanup
+  }
+});
 
 // Function to handle server shutdown
-async function handleShutdown() {
-  console.log('Server shutting down...');
+async function handleShutdown(isServiceStop = false) {
+  // Use a flag to prevent multiple shutdowns
+  if (global.isShuttingDown) {
+    return;
+  }
+  global.isShuttingDown = true;
+
+  console.log(isServiceStop ? 'Service stop requested...' : 'Server shutting down...');
   console.log('Turning off lights marked with turnOffOnShutdown=true...');
   
   // Find lights that should be turned off
   const lightsToTurnOff = lights.filter(light => light.turnOffOnShutdown === true);
-  
   if (lightsToTurnOff.length > 0) {
     console.log(`Turning off ${lightsToTurnOff.length} lights...`);
     
@@ -535,18 +595,36 @@ async function handleShutdown() {
       params: { state: false }
     };
     
-    // Turn off all marked lights
-    await Promise.all(lightsToTurnOff.map(async (light) => {
-      try {
-        console.log(`Turning off light: ${light.name} (${light.ipAddress})`);
-        await sendUdpMessage(light.ipAddress, offMessage);
-      } catch (error) {
-        console.error(`Error turning off light ${light.name}:`, error);
+    try {
+      // Try to directly execute the shutdown script to ensure lights are turned off
+      const directShutdownAttempted = await executeDirectShutdown();
+      
+      if (!directShutdownAttempted) {
+        // Fallback to the built-in shutdown process
+        console.log('Using built-in shutdown process as fallback...');
+        
+        // Turn off all marked lights with more reliable individual handling
+        for (const light of lightsToTurnOff) {
+          try {
+            console.log(`Turning off light: ${light.name} (${light.ipAddress})`);
+            await sendUdpMessage(light.ipAddress, offMessage);
+            // Add a small delay between each light to ensure message delivery
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (error) {
+            console.error(`Error turning off light ${light.name}:`, error);
+          }
+        }
+      } else {
+        console.log('Direct shutdown script executed, no need for built-in shutdown.');
       }
-    }));
-    
-    // Give some time for the UDP messages to be sent
-    await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Give more time for the UDP messages to be sent
+      console.log('Waiting for shutdown commands to complete...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Shutdown sequence complete.');
+    } catch (error) {
+      console.error('Error during shutdown sequence:', error);
+    }
   } else {
     console.log('No lights to turn off on shutdown');
   }
@@ -555,38 +633,93 @@ async function handleShutdown() {
   process.exit(0);
 }
 
+// Function to execute the direct shutdown script
+async function executeDirectShutdown() {
+  try {
+    // Only attempt to execute the script if running as a service
+    const isService = process.env.NODE_ENV === 'production' || 
+                      process.argv.some(arg => arg.includes('daemon')) ||
+                      process.title.includes('WizLightControl');
+    
+    if (isService) {
+      const { spawn } = require('child_process');
+      const shutdownScriptPath = path.join(__dirname, '..', 'scripts', 'direct-shutdown.bat');
+      
+      console.log(`Executing direct shutdown script: ${shutdownScriptPath}`);
+      
+      // Execute the script in a detached process so it can continue running if this process is killed
+      const child = spawn('cmd.exe', ['/c', shutdownScriptPath], {
+        detached: true,
+        stdio: 'ignore'
+      });
+      
+      // Unref the child process so it can run independently
+      child.unref();
+      
+      return true;
+    }
+  } catch (error) {
+    console.error('Failed to execute direct shutdown script:', error);
+  }
+  
+  return false;
+}
+
 // Start the server
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Monitoring ${lights.length} Wiz lights`);
+
+// Delayed startup to ensure network is ready
+const startServer = async () => {
+  // Check if running as a service
+  const isService = process.env.NODE_ENV === 'production' || 
+                    process.argv.some(arg => arg.includes('daemon')) ||
+                    process.title.includes('WizLightControl');
   
-  // Turn on all lights marked with autoTurnOnAtStartup=true
-  const lightsToTurnOn = lights.filter(light => light.autoTurnOnAtStartup === true);
-  
-  if (lightsToTurnOn.length > 0) {
-    console.log(`Auto-turning on ${lightsToTurnOn.length} lights...`);
-    
-    // Create a message to turn on a light
-    const onMessage = {
-      id: 1,
-      method: "setState",
-      params: { state: true }
-    };
-    
-    // Turn on all marked lights
-    await Promise.all(lightsToTurnOn.map(async (light) => {
-      try {
-        console.log(`Turning on light: ${light.name} (${light.ipAddress})`);
-        await sendUdpMessage(light.ipAddress, onMessage);
-      } catch (error) {
-        console.error(`Error turning on light ${light.name}:`, error);
-      }
-    }));
-    
-    // Update light statuses after a short delay
-    setTimeout(updateLightStatuses, 1000);
-  } else {
-    console.log('No lights to auto-turn on at startup');
+  // If running as a service, add extra delay to ensure network is ready
+  if (isService) {
+    console.log('Running as a service, waiting for network to initialize...');
+    await new Promise(resolve => setTimeout(resolve, 15000)); // 15 second delay on service startup
+    console.log('Network initialization delay completed');
   }
-});
+
+  server.listen(PORT, async () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Monitoring ${lights.length} Wiz lights`);
+    
+    // Add a delay to ensure UDP socket is fully initialized
+    console.log('Waiting for UDP socket initialization...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Turn on all lights marked with autoTurnOnAtStartup=true
+    const lightsToTurnOn = lights.filter(light => light.autoTurnOnAtStartup === true);
+    
+    if (lightsToTurnOn.length > 0) {
+      console.log(`Auto-turning on ${lightsToTurnOn.length} lights...`);
+      
+      // Create a message to turn on a light
+      const onMessage = {
+        id: 1,
+        method: "setState",
+        params: { state: true }
+      };
+      
+      // Turn on all marked lights
+      await Promise.all(lightsToTurnOn.map(async (light) => {
+        try {
+          console.log(`Turning on light: ${light.name} (${light.ipAddress})`);
+          await sendUdpMessage(light.ipAddress, onMessage);
+        } catch (error) {
+          console.error(`Error turning on light ${light.name}:`, error);
+        }
+      }));
+      
+      // Update light statuses after a short delay
+      setTimeout(updateLightStatuses, 1000);
+    } else {
+      console.log('No lights to auto-turn on at startup');
+    }
+  });
+};
+
+// Start the server with delayed startup
+startServer();
