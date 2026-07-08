@@ -1,5 +1,7 @@
 # Wiz Light Control
 
+> ⚠️ **DEPRECATED**: This project is now deprecated and no longer actively maintained. The content here is outdated. A redesigned and enhanced version of this system is planned for the future.
+
 A web application to control Wiz smart lights over your local network. This project consists of a React frontend and a Node.js backend server that communicates with Wiz lights.
 
 ## Features
